@@ -1,0 +1,10 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# 临时预览与脚本产物
+_preview_*.png
+*.tmp

@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>8总办公室突袭模拟器 · 游戏版</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --ink:#20160c;
+    --paper:#f4ead6;
+    --wall:#d9c39c;
+    --wall2:#c9ad7d;
+    --floor:#7c5230;
+    --floor2:#6a4426;
+    --red:#c8321f;
+    --green:#1f7a4d;
+    --gold:#e6a52c;
+  }
+  html,body{height:100%}
+  body{
+    font-family:"Georgia","Songti SC","Microsoft YaHei",serif;
+    background:#1a120a;color:var(--ink);overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* ============ 开始页 ============ */
+  .start{
+    position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+    background:
+      radial-gradient(1200px 700px at 70% -10%,rgba(230,165,44,.18),transparent 60%),
+      radial-gradient(900px 600px at 10% 120%,rgba(200,50,31,.2),transparent 60%),
+      #140d06;
+  }
+  .start.hide{display:none}
+  .start-card{width:min(560px,92vw);text-align:center;padding:44px 34px;
+    background:linear-gradient(180deg,#241809,#160e05);
+    border:2px solid rgba(230,165,44,.4);border-radius:22px;
+    box-shadow:0 40px 120px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06)}
+  .kicker{display:inline-block;letter-spacing:6px;font-size:12px;color:var(--gold);
+    border:1px solid rgba(230,165,44,.5);border-radius:999px;padding:6px 16px;font-family:"Microsoft YaHei",sans-serif}
+  .start h1{color:#f5ecd8;font-size:46px;line-height:1.1;margin:20px 0 8px;letter-spacing:2px}
+  .start h1 em{color:var(--red);font-style:normal}
+  .start p{color:#b7a480;font-size:15px;line-height:1.8;font-family:"Microsoft YaHei",sans-serif;margin-bottom:6px}
+  .cfg{display:flex;gap:10px;justify-content:center;margin:22px 0 6px;flex-wrap:wrap;font-family:"Microsoft YaHei",sans-serif}
+  .cfg .seg{background:rgba(255,255,255,.05);border:1px solid rgba(230,165,44,.3);border-radius:12px;padding:10px 12px;color:#d8c9a6;font-size:13px}
+  .cfg input{width:52px;background:transparent;border:none;border-bottom:1px solid var(--gold);color:#fff;text-align:center;font-size:16px;font-family:inherit}
+  .cfg input:focus{outline:none}
+  .go{margin-top:22px;cursor:pointer;border:none;border-radius:14px;padding:16px 30px;font-size:18px;font-weight:800;letter-spacing:3px;
+    color:#160e05;background:linear-gradient(135deg,var(--gold),#f7cf6b);box-shadow:0 14px 40px rgba(230,165,44,.4);font-family:"Microsoft YaHei",sans-serif}
+  .go:active{transform:translateY(2px)}
+  .go.ghost{background:transparent;color:#d8c9a6;border:1px solid rgba(230,165,44,.4);box-shadow:none;margin-left:10px}
+
+  /* ============ 办公室场景 ============ */
+  .office{position:fixed;inset:0;overflow:hidden;background:#0d0905}
+  .stage{position:absolute;inset:0}
+  .wall{position:absolute;left:0;right:0;top:0;height:64%;
+    background:
+      repeating-linear-gradient(90deg,transparent 0 118px,rgba(0,0,0,.05) 118px 120px),
+      linear-gradient(180deg,var(--wall),var(--wall2));
+    box-shadow:inset 0 -40px 60px rgba(0,0,0,.18)}
+  .floor{position:absolute;left:0;right:0;bottom:0;top:64%;
+    background:
+      repeating-linear-gradient(90deg,rgba(0,0,0,.16) 0 2px,transparent 2px 96px),
+      linear-gradient(180deg,var(--floor),var(--floor2));
+    box-shadow:inset 0 30px 60px rgba(0,0,0,.25)}
+  /* 门 */
+  .door{position:absolute;left:6%;top:8%;width:172px;height:58%;
+    background:linear-gradient(180deg,#3a2413,#25160b);border:8px solid #4a3016;border-radius:6px;
+    box-shadow:0 20px 50px rgba(0,0,0,.4)}
+  .door .glow{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at 50% 40%,rgba(255,240,200,.9),rgba(230,165,44,.25) 45%,transparent 72%);transition:opacity .5s}
+  .office.raid .door .glow{opacity:1}
+  .door .exit{position:absolute;left:50%;top:-30px;transform:translateX(-50%);font-family:"Microsoft YaHei",sans-serif;font-size:12px;letter-spacing:4px;color:#5a3c1e}
+  .door:after{content:"";position:absolute;right:14px;top:52%;width:12px;height:12px;border-radius:50%;background:var(--gold)}
+  /* 白板 */
+  .board{position:absolute;right:7%;top:12%;width:32%;height:36%;background:#fbf6ea;border:6px solid #2a1c0e;border-radius:4px;
+    box-shadow:8px 10px 0 rgba(0,0,0,.15)}
+  .board:before{content:"用户痛点 · 目标数据 · 用户故事";position:absolute;left:8%;top:16%;font-family:"Microsoft YaHei",sans-serif;font-size:15px;color:#9c3b2c;font-weight:800}
+  .board:after{content:"KPI 冲！";position:absolute;right:10%;bottom:14%;font-family:"Microsoft YaHei",sans-serif;font-size:34px;color:rgba(200,50,31,.25);transform:rotate(-6deg);font-weight:900}
+  /* 我方工位 */
+  .desk{position:absolute;right:8%;bottom:6%;width:38%;height:30%}
+  .desk .top{position:absolute;inset:auto 0 0 0;height:60%;background:linear-gradient(180deg,#5a3a20,#43291593);border-radius:8px 8px 4px 4px;box-shadow:0 14px 30px rgba(0,0,0,.35)}
+  .monitor{position:absolute;left:12%;bottom:44%;width:150px;height:96px;background:#0b0f14;border:6px solid #1d130a;border-radius:8px;box-shadow:0 8px 18px rgba(0,0,0,.4)}
+  .monitor .scr{position:absolute;inset:5px;border-radius:3px;background:linear-gradient(135deg,#123,#065f46);overflow:hidden;transition:background .18s}
+  .office.working .monitor .scr{background:linear-gradient(135deg,#12203a,#1e4fd6)}
+  .monitor .stand{position:absolute;left:50%;bottom:-20px;transform:translateX(-50%);width:20px;height:20px;background:#1d130a}
+  .cup{position:absolute;right:20%;bottom:44%;width:30px;height:40px;background:#c8321f;border-radius:4px 4px 10px 10px}
+  .cup:after{content:"";position:absolute;right:-10px;top:8px;width:14px;height:18px;border:4px solid #c8321f;border-radius:50%}
+  /* 我方小人（背影，坐着） */
+  .me{position:absolute;right:24%;bottom:6%;width:120px;height:150px}
+  .me .head{position:absolute;left:50%;top:0;transform:translateX(-50%);width:58px;height:58px;border-radius:50%;background:#3a2a1c}
+  .me .body{position:absolute;left:50%;top:44px;transform:translateX(-50%);width:104px;height:110px;background:#334155;border-radius:30px 30px 10px 10px}
+  .me .chair{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);width:120px;height:26px;background:#111;border-radius:8px}
+
+  /* ============ 8总（真人透明素材） ============ */
+  .boss{position:absolute;bottom:6%;left:9%;width:150px;height:300px;z-index:20;
+    opacity:0;transform:translateX(-40px);
+    transition:opacity .3s, transform 1.5s cubic-bezier(.22,.75,.24,1), left 1.5s cubic-bezier(.22,.75,.24,1);
+    filter:drop-shadow(0 22px 18px rgba(0,0,0,.45))}
+  .boss img{width:100%;height:100%;object-fit:contain;object-position:bottom center;display:block}
+  .boss .v{position:absolute;inset:0;opacity:0;transition:opacity .25s}
+  .boss .v.on{opacity:1}
+  /* 状态：进门→走到桌前→站定 */
+  .office.walkin .boss{opacity:1;left:44%;transform:translateX(-50%);animation:bob 0.5s ease-in-out infinite}
+  .office.stand .boss{opacity:1;left:46%;transform:translateX(-50%) scale(1.04)}
+  .office.leaving .boss{opacity:1;left:6%;transform:translateX(-50%) scaleX(-1);animation:bob 0.5s ease-in-out infinite}
+  @keyframes bob{0%,100%{margin-bottom:0}50%{margin-bottom:8px}}
+
+  /* 台词气泡 */
+  .bubble{position:absolute;left:50%;top:12%;transform:translateX(-50%) translateY(-10px);
+    width:min(560px,84vw);background:#fff;border:4px solid var(--ink);border-radius:20px;padding:16px 22px;
+    box-shadow:10px 10px 0 rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:.25s;z-index:35;font-family:"Microsoft YaHei",sans-serif}
+  .bubble.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .bubble:after{content:"";position:absolute;left:50%;bottom:-18px;transform:translateX(-50%);border:12px solid transparent;border-top-color:var(--ink)}
+  .bubble .who{font-size:12px;letter-spacing:3px;color:var(--red);font-weight:900}
+  .bubble .say{font-size:28px;font-weight:900;line-height:1.25;margin-top:4px;color:var(--ink)}
+  .bubble .tip{margin-top:8px;font-size:13px;color:#8a6b45;font-weight:700}
+
+  /* 贴脸特写 */
+  .closeup{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.6);
+    width:min(440px,82vw);height:min(440px,82vw);border-radius:50%;overflow:hidden;
+    border:10px solid var(--red);background:#fff;box-shadow:0 0 0 14px #fff,0 40px 120px rgba(0,0,0,.55);
+    opacity:0;pointer-events:none;transition:.28s cubic-bezier(.3,1.4,.4,1);z-index:40}
+  .office.closeup .closeup{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  .closeup img{width:118%;height:118%;object-fit:cover;object-position:center 30%;margin:-9%}
+
+  /* 顶部 HUD */
+  .hud{position:absolute;left:0;right:0;top:0;z-index:30;display:flex;justify-content:space-between;align-items:center;
+    padding:12px 18px;font-family:"Microsoft YaHei",sans-serif;color:#3a2814;
+    background:linear-gradient(180deg,rgba(244,234,214,.9),rgba(244,234,214,0))}
+  .hud .stat{display:flex;gap:14px}
+  .hud .cell{background:rgba(255,255,255,.55);border:1.5px solid #7c5230;border-radius:12px;padding:6px 12px;text-align:center}
+  .hud .k{font-size:11px;color:#8a6b45}
+  .hud .v{font-size:20px;font-weight:900}
+  .hud .v.red{color:var(--red)}.hud .v.green{color:var(--green)}
+  .hud .quit{cursor:pointer;border:1.5px solid #7c5230;background:rgba(255,255,255,.5);border-radius:10px;padding:8px 14px;font-weight:800;color:#3a2814}
+
+  /* 倒计时进度条 */
+  .timerbar{position:absolute;left:50%;bottom:30%;transform:translateX(-50%);z-index:38;
+    width:min(520px,80vw);height:16px;border-radius:999px;background:rgba(0,0,0,.35);
+    border:2px solid rgba(255,255,255,.55);overflow:hidden;opacity:0;transition:.2s;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  .timerbar.show{opacity:1}
+  .timerbar .fill{position:absolute;left:0;top:0;bottom:0;width:100%;
+    background:linear-gradient(90deg,var(--green),#7ee0a8);transition:width .18s linear}
+  .timerbar.danger .fill{background:linear-gradient(90deg,var(--red),#ff7a5f);animation:heartbeat .5s infinite}
+  @keyframes heartbeat{0%,100%{filter:brightness(1)}50%{filter:brightness(1.5)}}
+  .timerbar .num{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:900;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);font-family:"Microsoft YaHei",sans-serif}
+  .office.danger .stage{animation:shakeScreen .35s infinite}
+  @keyframes shakeScreen{0%,100%{transform:translate(0,0)}25%{transform:translate(-3px,2px)}75%{transform:translate(3px,-2px)}}
+
+  /* 连击 HUD */
+  .combo{position:absolute;left:50%;top:20%;transform:translate(-50%,-14px);z-index:37;
+    font-family:"Microsoft YaHei",sans-serif;font-weight:900;color:var(--gold);text-shadow:0 2px 0 #7a4a12,0 0 24px rgba(230,165,44,.6);
+    font-size:44px;letter-spacing:2px;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap}
+  .combo.show{opacity:1;transform:translate(-50%,0)}
+  .combo .x{font-size:26px}
+  .combo.pop{animation:comboPop .4s}
+  @keyframes comboPop{0%{transform:translate(-50%,0) scale(1.5)}100%{transform:translate(-50%,0) scale(1)}}
+
+  /* 切窗口伪装按钮 */
+  .switchbtn{position:absolute;left:50%;bottom:14%;transform:translateX(-50%);z-index:38;
+    cursor:pointer;border:none;border-radius:18px;padding:20px 40px;font-size:24px;font-weight:900;letter-spacing:1px;
+    color:#fff;background:linear-gradient(135deg,var(--red),#ff6a4d);box-shadow:0 18px 46px rgba(200,50,31,.55);
+    opacity:0;pointer-events:none;transition:.15s;font-family:"Microsoft YaHei",sans-serif;display:flex;align-items:center;gap:8px}
+  .switchbtn.show{opacity:1;pointer-events:auto;animation:pulse 0.7s infinite}
+  .switchbtn:active{transform:translateX(-50%) scale(.96)}
+  .kbd{display:inline-block;background:#fff;color:var(--ink);border-radius:8px;padding:4px 12px;font-size:20px;font-weight:900;
+    box-shadow:0 4px 0 rgba(0,0,0,.35);font-family:"Microsoft YaHei",sans-serif}
+
+  /* 继续摸鱼博弈按钮 */
+  .loafbtn{position:absolute;left:50%;bottom:14%;transform:translateX(-50%);z-index:38;
+    cursor:pointer;border:none;border-radius:16px;padding:16px 34px;font-size:18px;font-weight:900;letter-spacing:1px;
+    color:#160e05;background:linear-gradient(135deg,var(--gold),#f7cf6b);box-shadow:0 14px 36px rgba(230,165,44,.5);
+    opacity:0;pointer-events:none;transition:.15s;font-family:"Microsoft YaHei",sans-serif}
+  .loafbtn.show{opacity:1;pointer-events:auto}
+  .loafbtn:active{transform:translateX(-50%) scale(.96)}
+
+  /* 结算页 */
+  .over{position:fixed;inset:0;z-index:75;display:none;align-items:center;justify-content:center;
+    background:radial-gradient(900px 600px at 50% -10%,rgba(230,165,44,.16),transparent 60%),#0e0904}
+  .over.show{display:flex;animation:fadein .5s}
+  .over .card{width:min(560px,92vw);text-align:center;padding:40px 32px;font-family:"Microsoft YaHei",sans-serif;
+    background:linear-gradient(180deg,#241809,#160e05);border:2px solid rgba(230,165,44,.4);border-radius:22px;
+    box-shadow:0 40px 120px rgba(0,0,0,.6)}
+  .over .rank{font-size:14px;letter-spacing:6px;color:var(--gold)}
+  .over h2{color:#f5ecd8;font-size:40px;margin:10px 0 4px;letter-spacing:2px}
+  .over .title{color:var(--red);font-size:24px;font-weight:900;margin-bottom:18px}
+  .over .grid{display:flex;gap:12px;justify-content:center;margin:8px 0 4px;flex-wrap:wrap}
+  .over .box{background:rgba(255,255,255,.05);border:1px solid rgba(230,165,44,.3);border-radius:14px;padding:12px 18px;min-width:96px}
+  .over .box .k{font-size:12px;color:#b7a480}
+  .over .box .v{font-size:28px;font-weight:900;color:#f5ecd8}
+  .over .best{margin-top:14px;color:#e6a52c;font-size:15px;font-weight:800;min-height:22px}
+  .over button{margin-top:22px;cursor:pointer;border:none;border-radius:14px;padding:15px 32px;font-size:17px;font-weight:900;letter-spacing:2px;
+    color:#160e05;background:linear-gradient(135deg,var(--gold),#f7cf6b);font-family:inherit}
+
+  @keyframes pulse{50%{transform:translateX(-50%) scale(1.06)}}
+
+  /* 摸鱼状态下屏幕闪一下（越贪心越危险的提示） */
+  .office.working .me .body{background:#1e4fd6}
+
+  /* 暴击 */
+  .impact{position:fixed;inset:0;z-index:50;display:none;pointer-events:none}
+  .impact.show{display:block}
+  .impact .flash{position:absolute;inset:0;background:#fff;animation:flash .45s}
+  @keyframes flash{0%,15%{opacity:1}100%{opacity:0}}
+  .impact .slash{position:absolute;inset:0;background:repeating-linear-gradient(148deg,transparent 0 46px,rgba(200,50,31,.28) 46px 52px)}
+  .impact .stamp{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-11deg);
+    border:10px solid var(--red);color:var(--red);background:rgba(255,255,255,.82);border-radius:16px;
+    padding:20px 34px;font-size:min(9vw,64px);font-weight:900;letter-spacing:3px;font-family:"Microsoft YaHei",sans-serif}
+
+  /* 绩效小黑屋 */
+  .jail{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:#080605;color:#eee;text-align:center}
+  .jail.show{display:flex;animation:fadein .6s}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  .jail:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 52px,rgba(255,255,255,.09) 52px 60px)}
+  .jail .card{position:relative;z-index:2;width:min(680px,92vw);padding:36px 30px;border:3px solid var(--red);border-radius:22px;
+    background:#150f0a;box-shadow:0 0 100px rgba(200,50,31,.35);font-family:"Microsoft YaHei",sans-serif}
+  .jail h2{color:var(--red);font-size:min(11vw,60px);letter-spacing:6px}
+  .jail p{font-size:20px;margin-top:16px;font-weight:800}
+  .jail .small{color:#a99;font-size:14px;margin-top:12px}
+  .jail button{margin-top:24px;cursor:pointer;border:none;border-radius:12px;padding:14px 28px;font-size:16px;font-weight:900;background:var(--gold);color:#160e05;font-family:inherit}
+
+  .log{position:absolute;left:18px;bottom:16px;z-index:30;width:min(320px,42vw);max-height:130px;overflow:auto;
+    font-family:"Microsoft YaHei",sans-serif;font-size:12px;line-height:1.7;color:#4a3418;
+    background:rgba(255,255,255,.4);border:1px solid #7c5230;border-radius:12px;padding:10px 12px}
+  .log b{color:var(--red)}
+
+  @media(max-width:720px){
+    .start h1{font-size:34px}.bubble .say{font-size:22px}.boss{width:120px;height:240px}
+    .board{display:none}.log{display:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- 开始页 -->
+<div class="start" id="start">
+  <div class="start-card">
+    <span class="kicker">OFFICE RAID SIMULATOR</span>
+    <h1>8总办公室<em>突袭</em>模拟器</h1>
+    <p>开始后你就在办公室里摸鱼，门开着。</p>
+    <p>8总随机推门进来贴脸——你要在限时内按 <b>Alt+Tab</b> 把摸鱼画面切成工作画面。</p>
+    <p style="color:var(--red);font-weight:800">切慢了 / 没切到 = “你在干锤子？”当场暴击</p>
+    <div class="cfg">
+      <span class="seg">最短 <input id="minGap" value="10">秒</span>
+      <span class="seg">最长 <input id="maxGap" value="30">秒</span>
+      <span class="seg">切窗限时 <input id="proveSec" value="3">秒</span>
+    </div>
+    <button class="go" onclick="enterOffice(false)">进入办公室</button>
+    <button class="go ghost" onclick="enterOffice(true)">立即演示一次</button>
+  </div>
+</div>
+
+<!-- 办公室 -->
+<div class="office" id="office">
+  <div class="stage">
+    <div class="wall"></div>
+    <div class="floor"></div>
+    <div class="door"><div class="exit">出口</div><div class="glow"></div></div>
+    <div class="board"></div>
+    <div class="desk"><div class="top"></div></div>
+    <div class="monitor"><div class="scr" id="scr"></div><div class="stand"></div></div>
+    <div class="cup"></div>
+    <div class="me"><div class="head"></div><div class="body"></div><div class="chair"></div></div>
+
+    <!-- 8总真人素材：三个视图叠一起，按状态切显示 -->
+    <div class="boss" id="boss">
+      <div class="v" id="vFront"><img src="assets/boss8-front.png" alt="8总正面"></div>
+      <div class="v" id="vSide"><img src="assets/boss8-side.png" alt="8总侧面"></div>
+      <div class="v" id="vBack"><img src="assets/boss8-back.png" alt="8总背面"></div>
+      <div class="v" id="vGun"><img src="assets/boss8-gun.png" alt="8总持枪"></div>
+    </div>
+  </div>
+
+  <div class="hud">
+    <div class="stat">
+      <div class="cell"><div class="k">得分</div><div class="v" id="score">0</div></div>
+      <div class="cell"><div class="k">躲过</div><div class="v green" id="pass">0</div></div>
+      <div class="cell"><div class="k">被暴击</div><div class="v red" id="hit">0</div></div>
+      <div class="cell"><div class="k">已摸鱼</div><div class="v" id="elapsed">0.0s</div></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="quit" onclick="raidNow()">召唤8总</button>
+      <button class="quit" onclick="quitOffice()">下班</button>
+    </div>
+  </div>
+
+  <div class="combo" id="combo"></div>
+
+  <div class="bubble" id="bubble"><div class="who">8总 · 随机突袭</div><div class="say" id="say">你在干锤子？</div><div class="tip" id="tip">快按 Alt+Tab 切成工作画面！</div></div>
+
+  <div class="closeup" id="closeup"><img src="assets/boss8-gun-head.png" alt="8总持枪特写"></div>
+
+  <div class="timerbar" id="timerbar"><div class="fill" id="timerfill"></div><div class="num" id="timernum"></div></div>
+
+  <button class="switchbtn" id="switchBtn" onclick="switchWindow()">
+    <span class="kbd">Alt</span>+<span class="kbd">Tab</span> 切窗口伪装
+  </button>
+
+  <button class="loafbtn" id="loafBtn" onclick="startLoaf()">继续摸鱼攒分 ▸</button>
+
+  <div class="log" id="log"><div>你已入座。摸鱼中……8总随时可能推门进来。</div></div>
+</div>
+
+<div class="over" id="over"><div class="card">
+  <div class="rank">下班结算</div>
+  <h2>今日战报</h2>
+  <div class="title" id="overTitle">摸鱼实习生</div>
+  <div class="grid">
+    <div class="box"><div class="k">得分</div><div class="v" id="ovScore">0</div></div>
+    <div class="box"><div class="k">躲过突袭</div><div class="v" id="ovPass">0</div></div>
+    <div class="box"><div class="k">最猛一波摸鱼</div><div class="v" id="ovCombo">0s</div></div>
+    <div class="box"><div class="k">被暴击</div><div class="v" id="ovHit">0</div></div>
+  </div>
+  <div class="best" id="ovBest"></div>
+  <button onclick="playAgain()">再来一天</button>
+</div></div>
+
+<div class="impact" id="impact"><div class="flash"></div><div class="slash"></div><div class="stamp" id="stamp">你在干锤子？</div></div>
+
+<div class="jail" id="jail"><div class="card">
+  <h2>绩效小黑屋</h2>
+  <p>三次没说清楚“你在推进什么”，先进来冷静。</p>
+  <div class="small">8总：不要讲大概念。用户痛点、目标数据、用户故事，一个一个说。</div>
+  <button onclick="outJail()">我想清楚了，回去干活</button>
+</div></div>
+
+<script>
+(function(){
+  var S={running:false,demo:false,startTs:0,pass:0,hit:0,
+         score:0,combo:0,maxCombo:0,
+         loafStart:0,loafRun:0,maxLoafRun:0,greedy:1,
+         minGap:10,maxGap:30,proveSec:3,curProveSec:3,
+         timer:null,raidTimer:null,rafId:null,heartTimer:null,deadline:0,state:'idle'};
+  var BEST_KEY='boss8_best_v1';
+  var enterLines=['你在干锤子？','我看你这个状态，不太像在推进问题。','别躲，我就看一眼你现在到底在干啥。','这个时间点，你最好不是在摸鱼。','说，你屏幕上现在到底是啥？'];
+  var passLines=['嗯，还在干活。行，继续。','看着挺认真，我一会儿再回来。','行，这次算你及格。','保持这个状态，别让我抓到。'];
+  var failLines=['你在干锤子？','手怎么这么慢？摸鱼摸上瘾了？','屏幕都没来得及切，还想瞒我？','这就是你说的在推进？','当我瞎？'];
+  var stamps=['你在干锤子？','切窗太慢','当场抓获','摸鱼实锤','手速堪忧','偷懒被抓'];
+
+  function $(id){return document.getElementById(id)}
+  function pick(a){return a[Math.floor(Math.random()*a.length)]}
+  function fmt1(s){return s.toFixed(1)+'s'}
+  function log(t,red){var d=document.createElement('div');var ts=new Date().toLocaleTimeString('zh-CN',{hour12:false});d.innerHTML='<b>['+ts+']</b> '+(red?'<b>'+t+'</b>':t);$('log').prepend(d)}
+
+  // 音效
+  var ac=null;
+  function tone(f,d,type,vol){try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();var o=ac.createOscillator(),g=ac.createGain();o.type=type||'square';o.frequency.value=f;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(vol||.16,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+  function knock(){tone(150,.08,'square',.3);setTimeout(function(){tone(120,.1,'square',.3)},140);setTimeout(function(){tone(100,.12,'square',.3)},280)}
+  function slam(){tone(70,.18,'sawtooth',.35);setTimeout(function(){tone(50,.26,'square',.28)},110)}
+  function laser(){[880,990,760,440].forEach(function(f,i){setTimeout(function(){tone(f,.08,'sawtooth',.15)},i*70)})}
+  function heartbeat(){tone(60,.09,'sine',.4);setTimeout(function(){tone(48,.12,'sine',.32)},150)}
+  function whoosh(){tone(300,.06,'sine',.2);setTimeout(function(){tone(620,.1,'sine',.2)},60)}
+
+  function showView(name){
+    $('vFront').className='v'+(name==='front'?' on':'');
+    $('vSide').className='v'+(name==='side'?' on':'');
+    $('vBack').className='v'+(name==='back'?' on':'');
+    $('vGun').className='v'+(name==='gun'?' on':'');
+  }
+  function setOffice(cls){$('office').className='office'+(cls?' '+cls:'')}
+  function working(on){var c=$('office');if(on)c.classList.add('working');else c.classList.remove('working')}
+
+  // 摸鱼倍率 HUD（复用 combo 元素显示“摸鱼赌注”）
+  function updGreedy(){
+    var el=$('combo');
+    if(S.greedy>1){el.textContent='摸鱼赌注 x'+S.greedy.toFixed(1);el.classList.add('show','pop');setTimeout(function(){el.classList.remove('pop')},260)}
+    else{el.classList.remove('show')}
+  }
+
+  window.enterOffice=function(demo){
+    S.minGap=Math.max(3,parseInt($('minGap').value)||10);
+    S.maxGap=Math.max(S.minGap+1,parseInt($('maxGap').value)||30);
+    S.proveSec=Math.max(1,parseFloat($('proveSec').value)||3);
+    S.demo=!!demo;S.running=true;S.pass=0;S.hit=0;S.score=0;S.combo=0;S.maxCombo=0;
+    S.greedy=1;S.maxLoafRun=0;S.startTs=Date.now();
+    $('pass').textContent='0';$('hit').textContent='0';$('score').textContent='0';$('elapsed').textContent='0.0s';
+    updGreedy();
+    $('start').className='start hide';$('over').className='over';
+    showView('front');setOffice('');working(false);
+    log('你入座开始摸鱼。屏幕一片绿油油。','');
+    beginLoaf();
+    if(demo){setTimeout(raidNow,700)}else{scheduleRaid()}
+  };
+
+  // 开始一段摸鱼：计时、越久赌注越高
+  function beginLoaf(){
+    S.state='idle';working(false);
+    S.loafStart=Date.now();
+    $('loafBtn').classList.remove('show');
+    $('switchBtn').classList.remove('show');
+    clearInterval(S.timer);
+    S.timer=setInterval(function(){
+      var run=(Date.now()-S.loafStart)/1000;
+      S.loafRun=run;
+      $('elapsed').textContent=fmt1(run);
+      // 摸得越久赌注越高（每 4 秒 +0.5，封顶 x5）
+      var g=Math.min(5,1+Math.floor(run/4)*0.5);
+      if(g!==S.greedy){S.greedy=g;updGreedy()}
+    },100);
+  }
+
+  // 根据贪心程度收紧下一次突袭：来得更快、切窗时间更短
+  function scheduleRaid(){
+    if(!S.running)return;
+    clearTimeout(S.raidTimer);
+    // 赌注越高，gap 越短（最多压到 min 的 40%）
+    var squeeze=1-(S.greedy-1)/5*0.6;
+    var gap=(S.minGap+Math.random()*(S.maxGap-S.minGap))*1000*squeeze;
+    if(gap<1500)gap=1500;
+    S.raidTimer=setTimeout(raidNow,gap);
+    log('（继续摸鱼……8总不知道什么时候推门。摸越久他来越快。）','');
+  }
+
+  function stopTimer(){
+    if(S.rafId){cancelAnimationFrame(S.rafId);S.rafId=null}
+    clearInterval(S.heartTimer);S.heartTimer=null;
+    $('office').classList.remove('danger');
+    $('timerbar').classList.remove('show');
+    $('timerfill').classList.remove('danger');
+    $('timernum').classList.remove('danger');
+  }
+
+  function startTimer(){
+    // 赌注越高，切窗时间越短（最短 1s）
+    S.curProveSec=Math.max(1,S.proveSec*(1-(S.greedy-1)/5*0.55));
+    var total=S.curProveSec*1000;
+    S.deadline=Date.now()+total;
+    $('timerbar').classList.add('show');
+    var lastSec=-1,danger=false;
+    function loop(){
+      if(S.state!=='question')return;
+      var remain=S.deadline-Date.now();
+      if(remain<0)remain=0;
+      var ratio=remain/total;
+      $('timerfill').style.width=(ratio*100)+'%';
+      var sec=Math.ceil(remain/1000);
+      $('timernum').textContent=sec+'s';
+      if(sec!==lastSec){lastSec=sec}
+      if(remain<=1200&&!danger){
+        danger=true;
+        $('timerfill').classList.add('danger');$('timernum').classList.add('danger');
+        if($('office').className.indexOf('danger')<0)$('office').className=$('office').className+' danger';
+        S.heartTimer=setInterval(heartbeat,420);heartbeat();
+      }
+      if(remain<=0){stopTimer();failWork();return}
+      S.rafId=requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  window.raidNow=function(){
+    if(!S.running)return;
+    if(S.state!=='idle')return;
+    clearTimeout(S.raidTimer);
+    // 结算这一段摸鱼时长
+    S.loafRun=(Date.now()-S.loafStart)/1000;
+    if(S.loafRun>S.maxLoafRun)S.maxLoafRun=S.loafRun;
+    clearInterval(S.timer);
+    S.state='walkin';
+    knock();setOffice('raid');
+    log('咚咚咚——门开了！','true');
+    setTimeout(function(){
+      showView('side');setOffice('raid walkin');slam();
+    },380);
+    setTimeout(function(){
+      showView('gun');setOffice('raid stand');
+      S.state='question';
+      $('say').textContent=pick(enterLines);
+      $('tip').textContent='快按 Alt+Tab（空格/回车/点按钮）切成工作画面！';
+      $('bubble').classList.add('show');
+      $('switchBtn').classList.add('show');
+      $('loafBtn').classList.remove('show');
+      log('8总贴脸："'+$('say').textContent+'" 屏幕还是绿的！','true');
+      startTimer();
+    },1700);
+  };
+
+  // 切窗口伪装成功
+  window.switchWindow=function(){
+    if(S.state!=='question')return;
+    stopTimer();
+    working(true);whoosh();
+    $('switchBtn').classList.remove('show');
+    passRaid();
+  };
+
+  function passRaid(){
+    S.state='pass';
+    S.combo++;if(S.combo>S.maxCombo)S.maxCombo=S.combo;
+    // 得分 = 基础 + 剩余时间奖励 + 本段摸鱼时长赌注
+    var timeBonus=Math.max(0,(S.deadline-Date.now())/1000); // 切得越快剩越多
+    var loafBonus=Math.floor(S.loafRun*8);                  // 摸得越久这波越值钱
+    var gain=Math.round((40+timeBonus*20+loafBonus)*S.greedy);
+    S.score+=gain;S.pass++;
+    $('pass').textContent=S.pass;$('score').textContent=S.score;
+    $('say').textContent=pick(passLines);
+    $('tip').textContent='险！切窗成功 +'+gain+'（摸鱼 '+fmt1(S.loafRun)+' · 赌注 x'+S.greedy.toFixed(1)+'）';
+    tone(660,.12,'sine',.16);setTimeout(function(){tone(880,.14,'sine',.16)},120);
+    log('切窗成功 +'+gain+' 分（这波摸了 '+fmt1(S.loafRun)+'）。','');
+    setTimeout(function(){showView('back');setOffice('working leaving')},600);
+    setTimeout(function(){
+      $('bubble').classList.remove('show');
+      setOffice('');showView('front');
+      offerNextLoaf();
+    },2100);
+  }
+
+  // 8总走后：让玩家决定是否继续摸鱼博弈
+  function offerNextLoaf(){
+    if(!S.running)return;
+    S.state='idle';
+    S.greedy=1;updGreedy();     // 新一段重新累积赌注
+    working(false);
+    $('loafBtn').classList.add('show');
+    $('say').textContent='';
+    log('8总转身走了。要继续摸鱼攒分吗？摸越久越值钱，但他回来越快、切窗时间越短。','');
+    // 玩家不点也会被随机突袭
+    beginLoaf();
+    scheduleRaid();
+  }
+
+  // 点“继续摸鱼”——其实只是给个爽感提示，摸鱼本就在进行
+  window.startLoaf=function(){
+    if(S.state!=='idle')return;
+    $('loafBtn').classList.remove('show');
+    whoosh();
+    log('你放心大胆地摸起了鱼……赌注开始往上涨。','');
+  };
+
+  function failWork(){
+    S.state='fail';
+    S.combo=0;
+    $('switchBtn').classList.remove('show');
+    $('loafBtn').classList.remove('show');
+    $('bubble').classList.remove('show');
+    showView('gun');setOffice('raid stand closeup');
+    $('say').textContent=pick(failLines);
+    $('bubble').classList.add('show');
+    setTimeout(attack,600);
+  }
+
+  function attack(){
+    S.hit++;$('hit').textContent=S.hit;
+    S.greedy=1;updGreedy();
+    $('stamp').textContent=pick(stamps);
+    $('impact').className='impact show';
+    laser();
+    log('8总当场抓获："'+$('stamp').textContent+'"（赌注清零）','true');
+    setTimeout(function(){$('impact').className='impact'},1200);
+    if(S.hit>=3){
+      setTimeout(function(){$('jail').className='jail show'},1100);
+    }else{
+      setTimeout(function(){
+        $('bubble').classList.remove('show');
+        setOffice('');showView('front');working(false);
+        offerNextLoaf();
+      },1500);
+    }
+  }
+
+  function rankTitle(){
+    if(S.hit>=3)return '绩效小黑屋常客';
+    if(S.score>=1500)return '摸鱼刺客·手速封神';
+    if(S.score>=800)return '老练的摸鱼选手';
+    if(S.score>=300)return '苟住的螺丝钉';
+    return '摸鱼实习生';
+  }
+
+  function showOver(){
+    var best=parseInt(localStorage.getItem(BEST_KEY)||'0',10);
+    var isNew=S.score>best;
+    if(isNew){best=S.score;try{localStorage.setItem(BEST_KEY,String(best))}catch(e){}}
+    $('overTitle').textContent=rankTitle();
+    $('ovScore').textContent=S.score;
+    $('ovPass').textContent=S.pass;
+    $('ovCombo').textContent=fmt1(S.maxLoafRun);
+    $('ovHit').textContent=S.hit;
+    $('ovBest').innerHTML=isNew?'🎉 新纪录！历史最高 <b>'+best+'</b> 分':'历史最高 <b>'+best+'</b> 分';
+    $('over').className='over show';
+  }
+
+  window.outJail=function(){
+    $('jail').className='jail';
+    log('从绩效小黑屋出来——这一天到此为止，结算。','');
+    endDay();
+  };
+
+  window.quitOffice=function(){endDay()};
+
+  window.playAgain=function(){$('over').className='over';enterOffice(false)};
+
+  function endDay(){
+    S.running=false;
+    clearInterval(S.timer);clearTimeout(S.raidTimer);
+    if(S.rafId){cancelAnimationFrame(S.rafId);S.rafId=null}
+    clearInterval(S.heartTimer);S.heartTimer=null;
+    $('jail').className='jail';$('impact').className='impact';
+    $('timerbar').classList.remove('show');
+    $('switchBtn').classList.remove('show');$('loafBtn').classList.remove('show');
+    setOffice('');showView('front');$('bubble').classList.remove('show');
+    log('下班。得分 '+S.score+'，躲过 '+S.pass+' 次，最猛一波摸鱼 '+fmt1(S.maxLoafRun)+'，被暴击 '+S.hit+' 次。','');
+    showOver();
+  }
+
+  // 键盘：8总在场时，Alt+Tab / 空格 / 回车 都能切窗
+  document.addEventListener('keydown',function(e){
+    if(S.state==='question'){
+      if(e.altKey&&e.code==='Tab'){e.preventDefault();switchWindow();return}
+      if(e.code==='Space'||e.code==='Enter'||e.code==='NumpadEnter'){e.preventDefault();switchWindow();return}
+    }
+  });
+
+  window.onerror=function(msg){try{log('页面报错：'+msg,'true')}catch(e){};return false};
+})();
+</script>
+</body>
+</html>
